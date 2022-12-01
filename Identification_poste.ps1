@@ -3,7 +3,7 @@
 ##Nom : identification-poste.ps1
 ##Description : ajoute les information client dans le registre (ESET) ou TAG (kaspersky) si elles sont dispo sur le poste (snr / histo/ juste sn ou rien)
 ##Emplacement : git-hub / exe ?
-##Date modification : 30/11/2022
+##Date modification : 01/12/2022
 ##Auteur : Baptiste Boileau
 ##
 ##########
