@@ -3,7 +3,7 @@
 ##Nom : identification-poste.ps1
 ##Description : ajoute les information client dans le registre (ESET) ou TAG (kaspersky) si elles sont dispo sur le poste (snr / histo/ juste sn ou rien)
 ##Emplacement : git-hub / exe ?
-##Date modification : 01/12/2022
+##Date modification : 05/12/2022
 ##Auteur : Baptiste Boileau
 ##
 ##########
@@ -69,10 +69,52 @@ function Get-InfoClientFromFiles {
     
 }
 
+function Get-ClientParLogISA {
+    #idem mais si pas de valeur dans le premier on passse au suivant (fonctionne pas problème sortie boucle quand result est rempli)
+    $result = ""
+    $ListConfigISA = Get-ChildItem -Path "c:\IS*" -Recurse | where name -Like "Application.Common.4.0.0.0.config"
+    $conteur = 0
+    $Maxconteur = $ListConfigISA.Count
+    if($ListConfigISA){
+        while ($conteur -lt $Maxconteur ){
+            [xml]$CONFIGISAtmp = Get-Content $($ListConfigISA[$conteur])
+        
+            $ISAsettingstmp = $CONFIGISAtmp.configuration.AuthenticationParameters.'Default.Trace'.setting
+            $result = ($ISAsettingstmp | where name -Like LastLicenceClientId | select Value).Value
+            if(!($result -eq "")){
+                break
+            }
+            $conteur++
+            
+        }
+    }else {
+        
+        $result = $null
+    }
+
+    return $result
+    
+}
+
+function set-AVInfo {
+    param (
+        [String]$AVclient = "AucunCodeClient",
+        [String]$AVserie = "AucunNumSerie"
+    )
+
+        #Modification de la cle registre avec CC et SN ESET
+        Set-ItemProperty -Path $regpath -Name Publisher -Value "ESET, spol. s r.o. $($AVclient)-$($AVserie)"
+        #Tag pour Kaspersky 
+        $arguments = '-ssvset -pv klnagent -s KLNAG_SECTION_TAGS_INFO -n KLCONN_HOST_TAGS -sv "[\"'+$($AVclient)+'\",\"'+$($AVserie)+'"]" -svt ARRAY_T -ss "|ss_type = \"SS_PRODINFO\";" -t d -tl 4'
+        $ksTag = "C:\Program Files (x86)\Kaspersky Lab\NetworkAgent\klscflag"
+        Start-Process $ksTag -ArgumentList $arguments
+    
+}
+
 function Set-SNR {
     param (
-        [String]$Cclient,
-        [string]$NumSerie,
+        [String]$Cclient = "AucunCodeClient",
+        [string]$NumSerie = "AucunNumSerie",
         [String]$SNRfile = "C:\SNR.txt"
     )
     if(Test-Path $SNRfile){
@@ -88,44 +130,52 @@ function Set-SNR {
     Add-Content -Path $SNRfile -value "NumeroSerie=$NumSerie"
     break
 }
-Function Set-NumSerieOuRien {
+
+Function Set-LastInfoOuRien {
     #On recupere le SN dans barebone
     $SN2 = Get-WmiObject -Class Win32_BIOS | select -ExpandProperty serialnumber
-    if ($SN2 -ne $null) {
+    $CClient2 = Get-ClientParLogISA
+
+    if($CClient2 -ne "" -and $SN2 -ne $null){
+        
+        #On fait le fichier SNR
+        Set-SNR -Cclient $CClient2 -NumSerie $SN2
+        #On récpère les infos du ficheir SNR
+        $info = Get-InfoClientFromFiles -FilePath $SNRfile
+        #On remontes les infos du snr dans les antivirus
+        Set-AVInfo -AVclient $($info.CodeClient) -AVserie $($info.SerialNumber)
+        break
+
+    }elseif ($SN2 -ne $null) {
         
         #Creation du fichier SNR avec juste le SN
-        Set-SNR -Cclient "NONidentifie" -NumSerie $SN2
-
-<#
-        #On cree le fichier SNR
-        New-Item $SNRfile -type file -force
-        #On ajoute les informations pertinentes au fichier SNR
-        Add-Content -path $SNRfile -value "[Infos_Client]"
-        Add-Content -Path $SNRfile -Value "Code_Client=NONidentifie"
-        Add-Content -Path $SNRfile -value "NumeroSerie=$($SN2)"
-#>
-        
-        #on reprend les infos saisies dans le SNR pour les forcer pour ESET et Kaspersky
+        Set-SNR -NumSerie $SN2
+        #On récpère les infos du ficheir SNR
         $info = Get-InfoClientFromFiles -FilePath $SNRfile
-        #Aucune des sources d'information retourne les bonnes information, il faut faire le fichier a la main
-        Set-ItemProperty -Path $regpath -Name Publisher -Value "ESET, spol. s r.o. $($info.CodeClient)-$($info.SerialNumber)"
-        $arguments = '-ssvset -pv klnagent -s KLNAG_SECTION_TAGS_INFO -n KLCONN_HOST_TAGS -sv "[\"'+$($info.CodeClient)+'\",\"'+$($info.SerialNumber)+'"]" -svt ARRAY_T -ss "|ss_type = \"SS_PRODINFO\";" -t d -tl 4'
-        $ksTag = "C:\Program Files (x86)\Kaspersky Lab\NetworkAgent\klscflag"
-        Start-Process $ksTag -ArgumentList $arguments
-        break   
+        #On remontes les infos du snr dans les antivirus
+        Set-AVInfo -AVclient $($info.CodeClient) -AVserie $($info.SerialNumber)
+        break  
+
+    }elseif($CClient2 -ne ""){
+
+        #Creation du fichier SNR avec juste le SN
+        Set-SNR -Cclient $CClient2
+        #On récpère les infos du ficheir SNR
+        $info = Get-InfoClientFromFiles -FilePath $SNRfile
+        #On remontes les infos du snr dans les antivirus
+        Set-AVInfo -AVclient $($info.CodeClient) -AVserie $($info.SerialNumber)
+        break
+
     }
     
-    #Aucune des sources d'information retourne les bonnes information, il faut faire le fichier a la main
-    Set-ItemProperty -Path $regpath -Name Publisher -Value "ESET, spol. s r.o. Aucune_Identification"
-    #Tag pour Kaspersky ?
-    $arguments = '-ssvset -pv klnagent -s KLNAG_SECTION_TAGS_INFO -n KLCONN_HOST_TAGS -sv "[\"Aucune_Identification"]" -svt ARRAY_T -ss "|ss_type = \"SS_PRODINFO\";" -t d -tl 4'
-    $ksTag = "C:\Program Files (x86)\Kaspersky Lab\NetworkAgent\klscflag"
-    Start-Process $ksTag -ArgumentList $arguments
+    Set-AVInfo
     break
 
 }
 
-
+###################
+##Début du script##
+###################
 
 #Si le fichier SNR existe
 if ((Test-Path $SNRfile)) {
@@ -135,13 +185,8 @@ if ((Test-Path $SNRfile)) {
     #si le code client et le num série récupéré ne sont pas vides
     if($info.CodeClient -and $info.SerialNumber -ne ""){
 
-        #Modification de la cle registre avec CC et SN ESET
-        Set-ItemProperty -Path $regpath -Name Publisher -Value "ESET, spol. s r.o. $($info.CodeClient)-$($info.SerialNumber)"
-        #Tag pour Kaspersky 
-        $arguments = '-ssvset -pv klnagent -s KLNAG_SECTION_TAGS_INFO -n KLCONN_HOST_TAGS -sv "[\"'+$($info.CodeClient)+'\",\"'+$($info.SerialNumber)+'"]" -svt ARRAY_T -ss "|ss_type = \"SS_PRODINFO\";" -t d -tl 4'
-        $ksTag = "C:\Program Files (x86)\Kaspersky Lab\NetworkAgent\klscflag"
-        Start-Process $ksTag -ArgumentList $arguments
-        #On sort du script car fini
+        #On remontes les infos du snr dans les antivirus
+        Set-AVInfo -AVclient $($info.CodeClient) -AVserie $($info.SerialNumber)
         break
 
     }else {#info sont pas bonnes 
@@ -157,114 +202,58 @@ if ((Test-Path $SNRfile)) {
                 #Creation du fichier SNR avec juste les infos pertinantes
                 Set-SNR -Cclient $($info.CodeClient) -NumSerie $($info.SerialNumber)
 
-<#
-                ##Creation Fichier SNR
-                #Si le fichier SNR exite on le supprime
-                if(Test-Path $SNRfile){
-                    Remove-Item $SNRfile
-                }
-
-                #On cree le fichier SNR
-                New-Item $SNRfile -type file -force
-                #On ajoute les informations pertinentes au fichier SNR
-                Add-Content -path $SNRfile -value "[Infos_Client]"
-                Add-Content -Path $SNRfile -Value "Code_Client=$($info.CodeClient)"
-                Add-Content -Path $SNRfile -value "NumeroSerie=$($info.SerialNumber)"
-#>
-
-                #Modification de la cle registre avec CC et SN
-                Set-ItemProperty -Path $regpath -Name Publisher -Value "ESET, spol. s r.o. $($info.CodeClient)-$($info.SerialNumber)"
-                #Tag pour Kaspersky ?
-                $arguments = '-ssvset -pv klnagent -s KLNAG_SECTION_TAGS_INFO -n KLCONN_HOST_TAGS -sv "[\"'+$($info.CodeClient)+'\",\"'+$($info.SerialNumber)+'"]" -svt ARRAY_T -ss "|ss_type = \"SS_PRODINFO\";" -t d -tl 4'
-                $ksTag = "C:\Program Files (x86)\Kaspersky Lab\NetworkAgent\klscflag"
-                Start-Process $ksTag -ArgumentList $arguments
-                #On sort du script car fini
+                #On remontes les infos du snr dans les antivirus
+                Set-AVInfo -AVclient $($info.CodeClient) -AVserie $($info.SerialNumber)
 
                 break
+
             }Else{#info dans histo erronees
+
                 #On met le SN ou on prévien qu'aucune info d'authentification est remonté
-                Set-NumSerieOuRien
+                Set-LastInfoOuRien
                 break
-                
-<#
-                #On recupere le SN dans barebone
-                $SN2 = Get-WmiObject -Class Win32_BIOS | select -ExpandProperty serialnumber
-                if ($SN2 -ne $null) {
-
-                    #On cree le fichier SNR
-                    New-Item $SNRfile -type file -force
-                    #On ajoute les informations pertinentes au fichier SNR
-                    Add-Content -path $SNRfile -value "[Infos_Client]"
-                    Add-Content -Path $SNRfile -Value "Code_Client=NONidentifie"
-                    Add-Content -Path $SNRfile -value "NumeroSerie=$($SN2)"
-
-                    #on reprend les infos saisies dans le SNR pour les forcer pour ESET et Kaspersky
-                    $info = Get-InfoClientFromFiles -FilePath $SNRfile
-                    #Aucune des sources d'information retourne les bonnes information, il faut faire le fichier a la main
-                    #Set-ItemProperty -Path $regpath -Name Publisher -Value "ESET, spol. s r.o. $($info.CodeClient)-$($info.SerialNumber)"
-                    #Tag pour Kaspersky ?
-                    #start-process ..?
-                    break   
-                }
-
-                #Aucune des sources d'information retourne les bonnes information, il faut faire le fichier a la main
-                Set-ItemProperty -Path $regpath -Name Publisher -Value "ESET, spol. s r.o. AucuneIdentification"
-                #Tag pour Kaspersky ?
-                #start-process ..?
-                break
-#>
+               
             }
         }else {#fichier histo n'existe pas
+
             #on met juste le num de série ou alors on remonte que le poste ne peux pas etre identifié
-            Set-NumSerieOuRien
+            Set-LastInfoOuRien
             break
+
         }
+
     }
+
 }else { #Si fichier SNR n'existe pas
     if ((Test-Path $HISTOfile )) {
+
         #on recupere le code client et sn du ficheri snr avec le fonction
         $info = Get-InfoClientFromFiles -FilePath $HISTOfile 
         
         #si le code client et le num série récupéré ne sont pas vides
         if($info.CodeClient -and $info.SerialNumber -ne ""){
+
             #Creation du fichier SNR avec juste les infos pertinantes
             Set-SNR -Cclient $($info.CodeClient) -NumSerie $($info.SerialNumber)
-
-<#
-            ##Creation Fichier SNR
-            #Si le fichier SNR exite on le supprime
-            if(Test-Path $SNRfile){
-                Remove-Item $SNRfile
-            }
-            #On cree le fichier SNR
-            New-Item $SNRfile -type file -force
-            #On ajoute les informations pertinentes au fichier SNR
-            Add-Content -path $SNRfile -value "[Infos_Client]"
-            Add-Content -Path $SNRfile -Value "Code_Client=$($info.CodeClient)"
-            Add-Content -Path $SNRfile -value "NumeroSerie=$($info.SerialNumber)"
-#>
-
-            #Modification de la cle registre avec CC et SN
-            Set-ItemProperty -Path $regpath -Name Publisher -Value "ESET, spol. s r.o. $($info.CodeClient)-$($info.SerialNumber)"
-            #De même pour kaspersky
-            $arguments = '-ssvset -pv klnagent -s KLNAG_SECTION_TAGS_INFO -n KLCONN_HOST_TAGS -sv "[\"'+$($info.CodeClient)+'\",\"'+$($info.SerialNumber)+'"]" -svt ARRAY_T -ss "|ss_type = \"SS_PRODINFO\";" -t d -tl 4'
-            $ksTag = "C:\Program Files (x86)\Kaspersky Lab\NetworkAgent\klscflag"
-            Start-Process $ksTag -ArgumentList $arguments
-            #On sort du script car fini
+            
+            #On remontes les infos du snr dans les antivirus
+            Set-AVInfo -AVclient $($info.CodeClient) -AVserie $($info.SerialNumber)
             break
+
         }Else{
+
             #on met juste le num de série ou alors on remonte que le poste ne peux pas etre identifié
-            Set-NumSerieOuRien
+            Set-LastInfoOuRien
             break
+
         }
+
     }else {#fichier histo n'existe pas
+
         #on met juste le num de série ou alors on remonte que le poste ne peux pas etre identifié
-        Set-NumSerieOuRien
+        Set-LastInfoOuRien
         break
+
     }
+
 }
-
-
-
-
-
