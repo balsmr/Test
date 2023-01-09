@@ -3,7 +3,7 @@
 ##Nom : identification-poste.ps1
 ##Description : ajoute les information client dans le registre (ESET) ou TAG (kaspersky) si elles sont dispo sur le poste (snr / histo/ juste sn ou rien)
 ##Emplacement : git-hub / exe ?
-##Date modification : 05/12/2022
+##Date modification : 09/01/2023
 ##Auteur : Baptiste Boileau
 ##
 ##########
@@ -102,13 +102,26 @@ function set-AVInfo {
         [String]$AVserie = "AucunNumSerie"
     )
 
-        #Modification de la cle registre avec CC et SN ESET
-        Set-ItemProperty -Path $regpath -Name Publisher -Value "ESET, spol. s r.o. $($AVclient)-$($AVserie)"
-        #Tag pour Kaspersky 
-        $arguments = '-ssvset -pv klnagent -s KLNAG_SECTION_TAGS_INFO -n KLCONN_HOST_TAGS -sv "[\"'+$($AVclient)+'\",\"'+$($AVserie)+'"]" -svt ARRAY_T -ss "|ss_type = \"SS_PRODINFO\";" -t d -tl 4'
-        $ksTag = "C:\Program Files (x86)\Kaspersky Lab\NetworkAgent\klscflag"
-        Start-Process $ksTag -ArgumentList $arguments
-    
+        $KPMexist =  Test-KPM
+
+        if ($KPMexist -eq $true) {
+
+            #Modification de la cle registre avec CC et SN ESET
+            Set-ItemProperty -Path $regpath -Name Publisher -Value "ESET, spol. s r.o. $($AVclient)-$($AVserie)-KPM"
+            #Tag pour Kaspersky 
+            $arguments = '-ssvset -pv klnagent -s KLNAG_SECTION_TAGS_INFO -n KLCONN_HOST_TAGS -sv "[\"'+$($AVclient)+'\",\"'+$($AVserie)+'\",\"KPM\"]" -svt ARRAY_T -ss "|ss_type = \"SS_PRODINFO\";" -t d -tl 4'
+            $ksTag = "C:\Program Files (x86)\Kaspersky Lab\NetworkAgent\klscflag"
+            Start-Process $ksTag -ArgumentList $arguments
+
+        }else {
+            #Modification de la cle registre avec CC et SN ESET
+            Set-ItemProperty -Path $regpath -Name Publisher -Value "ESET, spol. s r.o. $($AVclient)-$($AVserie)"
+            #Tag pour Kaspersky 
+            $arguments = '-ssvset -pv klnagent -s KLNAG_SECTION_TAGS_INFO -n KLCONN_HOST_TAGS -sv "[\"'+$($AVclient)+'\",\"'+$($AVserie)+'\"]" -svt ARRAY_T -ss "|ss_type = \"SS_PRODINFO\";" -t d -tl 4'
+            $ksTag = "C:\Program Files (x86)\Kaspersky Lab\NetworkAgent\klscflag"
+            Start-Process $ksTag -ArgumentList $arguments
+        }
+
 }
 
 function Set-SNR {
@@ -171,6 +184,25 @@ Function Set-LastInfoOuRien {
     Set-AVInfo
     break
 
+}
+
+function Test-KPM {
+    #De base on considère qu'il n'y a pas de coffre fort a mot de passe :
+    $Kvault = $false
+
+    ####################
+
+    $ListLocalUsers =  Get-LocalUser | where enabled -EQ $true
+
+    foreach ($User in $ListLocalUsers){
+        $Kvault = Test-Path -Path "C:\Users\$($User.Name)\AppData\Local\Kaspersky Lab\Kaspersky Password Manager\kpm_vault.edb"
+        if ($Kvault -eq $true) {
+            Return $Kvault
+        }
+    }
+
+    return $Kvault
+    
 }
 
 ###################
