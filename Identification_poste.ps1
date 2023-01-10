@@ -140,7 +140,7 @@ function Set-SNR {
     Write-Verbose "Ajout des informations dans le fichier SNR.txt ($Cclient et $NumSerie) "
     Add-Content -path $SNRfile -value "[Infos_Client]"
     Add-Content -Path $SNRfile -Value "Code_Client=$Cclient"
-    Add-Content -Path $SNRfile -value "NumeroSerie=$NumSerie"
+    Add-Content -Path $SNRfile -value "NumeroSerie=$($NumSerie.ToUpper())"
     break
 }
 
