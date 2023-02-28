@@ -3,8 +3,8 @@
 ##Nom : identification-poste.ps1
 ##Description : ajoute les information client dans le registre (ESET) ou TAG (kaspersky) si elles sont dispo sur le poste (snr / histo/ juste sn ou rien)
 ##Emplacement : git-hub / exe ?
-##Date modification : 09/01/2023
-##Auteur : Baptiste Boileau
+##Date modification : 16/01/2023
+##Auteur : BBO
 ##
 ##########
 
@@ -19,17 +19,77 @@ $SNRfile = "C:\SNR.txt"
 $HISTOfile = "c:\windows\historique\Infos_Client.txt"
 
 #Fonction pour reduire le code
+
+function Test-KPM {
+    <#
+    .SYNOPSIS
+    Vérifie si il y a un coffre KPM 
+
+    .DESCRIPTION
+    Vérifie si il y a un coffre KPM qui a été modifié il y a moins d'un mois
+
+    .EXAMPLE 
+    Test-KPM
+
+    .OUTPUTS
+    [bool] True ou False si coffre KPM exite ou pas
+
+    .NOTES
+        Auteur:  BBO
+        Derniere modification : 28/02/2023
+    #>
+    #De base on considère qu'il n'y a pas de coffre fort a mot de passe :
+    $Kvault = $false
+
+    ####################
+    #on lise les utilisateurs locaux
+    $ListLocalUsers =  Get-LocalUser | where enabled -EQ $true
+
+
+    foreach ($User in $ListLocalUsers){#pour tous les utilisateurs listés
+        #on met en variable le chemin du fichier vault
+        $KVpath = "C:\Users\$($User.Name)\AppData\Local\Kaspersky Lab\Kaspersky Password Manager\kpm_vault.edb"
+        #On test la presence du fichier vault
+        $Kvault = Test-Path -Path $KVpath
+        
+        if ($Kvault -eq $true) { #Si le fichier existe
+            #on récupère les informations du fichier vault
+            $coffre = Get-ChildItem -Path $KVpath
+            #on met la valeur de date a la date du jour moin un mois
+            $Date = (Get-Date).AddMonths(-1) 
+
+            if ($($coffre.LastWriteTime) -ge $Date  ){ #si la date de modification est plus récente que la valeur de Date
+
+                Return $Kvault #on retourne Kvault avec la valeur True
+
+            }else { #si le fichier a ete modifie  il y a plus d'un mois
+
+                #on force la valeur de Kvaul a false
+                $Kvault = $false 
+                #onretourne la valeur false pour Kvault
+                Return $Kvault
+
+            }
+
+        }
+
+    }
+
+    #on retourne Kvaul avec la valeur false
+    return $Kvault    
+}
 function Get-InfoClientFromFiles {
     <#
     .SYNOPSIS
-
+    Recuperation des informations client depuis des fichiers
 
     .DESCRIPTION
+    Recuperation du code cleint et numero de serie depuis le fichier c:\SNR.txt ou c:\windows\historique\infos_client.txt
     
     .PARAMETER FilePath
-
+    chemin du fichier concerne
     .EXAMPLE 
-
+    get-infoclientfromfiles -path c:\snr.txt
     .INPUTS
     [String] chemin du fichier contenant les informations client
 
@@ -41,7 +101,7 @@ function Get-InfoClientFromFiles {
             [string]$SerialNumber
 
     .NOTES
-        Auteur:  Baptiste Boileau
+        Auteur:  BBO
         Derniere modification : 21/11/2022
     #>
    
@@ -70,6 +130,23 @@ function Get-InfoClientFromFiles {
 }
 
 function Get-ClientParLogISA {
+    <#
+    .SYNOPSIS
+    Recuperation du code client depuis fichier ligiciel isa
+
+    .DESCRIPTION
+    Recuperation du code client depuis fichier Application.Common.4.0.0.0.config présent sur le C: sur les postes comportant un logiciel ISAGRI
+    
+    .EXAMPLE 
+    Get-ClientParLogISA
+
+    .OUTPUTS
+    [String]$Result 
+        Contenant le code client si trouvé
+    .NOTES
+        Auteur:  BBO
+        Derniere modification : 16/01/2023
+    #>
     #idem mais si pas de valeur dans le premier on passse au suivant (fonctionne pas problème sortie boucle quand result est rempli)
     $result = ""
     $ListConfigISA = Get-ChildItem -Path "c:\IS*" -Recurse | where name -Like "Application.Common.4.0.0.0.config"
@@ -97,6 +174,37 @@ function Get-ClientParLogISA {
 }
 
 function set-AVInfo {
+    <#
+    .SYNOPSIS
+    Envoyer les informations pour les Balise/Tag pour les antivirus
+
+    .DESCRIPTION
+    Reprend le code cleint et numéro de série pour le poste et les assigne pour balise eset ou tag kaspersky
+    
+    .PARAMETER AVclient
+    code client
+    
+
+    .PARAMETER AVserie
+    numéro de série du poste
+
+    .EXAMPLE 
+    get-infoclientfromfiles -path c:\snr.txt
+    .INPUTS
+    [String]$AVclient
+    [String]$AVserie
+
+    .OUTPUTS
+    PsObject :
+        - Code client
+            [string]$CodeClient
+        - Numéro série
+            [string]$SerialNumber
+
+    .NOTES
+        Auteur:  BBO
+        Derniere modification : 16/01/2023
+    #>
     param (
         [String]$AVclient = "AucunCodeClient",
         [String]$AVserie = "AucunNumSerie"
@@ -105,7 +213,6 @@ function set-AVInfo {
         $KPMexist =  Test-KPM
 
         if ($KPMexist -eq $true) {
-
             #Modification de la cle registre avec CC et SN ESET
             Set-ItemProperty -Path $regpath -Name Publisher -Value "ESET, spol. s r.o. $($AVclient)-$($AVserie)-KPM"
             #Tag pour Kaspersky 
@@ -125,6 +232,37 @@ function set-AVInfo {
 }
 
 function Set-SNR {
+    <#
+    .SYNOPSIS
+    Création fichier SNR
+
+    .DESCRIPTION
+    Création fichier SNR.txt à la racine ce C: contenant le code client et numéro de serie
+    
+    .PARAMETER Cclient
+    numéro de série du poste
+
+    .PARAMETER NumSerie
+    numéro de série du poste
+
+    .PARAMETER SNRfile
+    emplacement du fichier SNR si il est a changer
+
+    .EXAMPLE 
+    Set-SNR -Codeclient MonCodeClient -SerialNumber RXXXXXX
+
+    .INPUTS
+    [String]$Cclient
+    [string]$NumSerie
+    [String]$SNRfile
+
+    .OUTPUTS
+    Génère fichier SNR
+
+    .NOTES
+        Auteur:  BBO
+        Derniere modification : 16/01/2023
+    #>
     param (
         [String]$Cclient = "AucunCodeClient",
         [string]$NumSerie = "AucunNumSerie",
@@ -135,7 +273,7 @@ function Set-SNR {
     }
 
     New-Item $SNRfile -type file -force | Out-Null
-   
+
     #Ajout des informations dans le fichier
     Write-Verbose "Ajout des informations dans le fichier SNR.txt ($Cclient et $NumSerie) "
     Add-Content -path $SNRfile -value "[Infos_Client]"
@@ -145,6 +283,23 @@ function Set-SNR {
 }
 
 Function Set-LastInfoOuRien {
+    <#
+    .SYNOPSIS
+    Vérifie si il y a un code cleint ou  numéro de serie et les récupères au besoins
+
+    .DESCRIPTION
+    Vérifie si il y a un code cleint ou  numéro de serie et les récupères au besoins
+
+    .EXAMPLE 
+    Set-LastInfoOuRien
+
+    .OUTPUTS
+    Génère fichier SNR par la fonction
+
+    .NOTES
+        Auteur:  BBO
+        Derniere modification : 16/01/2023
+    #>
     #On recupere le SN dans barebone
     $SN2 = Get-WmiObject -Class Win32_BIOS | select -ExpandProperty serialnumber
     $CClient2 = Get-ClientParLogISA
@@ -186,24 +341,6 @@ Function Set-LastInfoOuRien {
 
 }
 
-function Test-KPM {
-    #De base on considère qu'il n'y a pas de coffre fort a mot de passe :
-    $Kvault = $false
-
-    ####################
-
-    $ListLocalUsers =  Get-LocalUser | where enabled -EQ $true
-
-    foreach ($User in $ListLocalUsers){
-        $Kvault = Test-Path -Path "C:\Users\$($User.Name)\AppData\Local\Kaspersky Lab\Kaspersky Password Manager\kpm_vault.edb"
-        if ($Kvault -eq $true) {
-            Return $Kvault
-        }
-    }
-
-    return $Kvault
-    
-}
 
 ###################
 ##Début du script##
