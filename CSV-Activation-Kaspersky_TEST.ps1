@@ -25,7 +25,7 @@ $LautreCSV = $content | ConvertFrom-Csv -Delimiter ";"
 #on filtre dans le CSV récupéré la ligne qui correspond au SN
 $FilterData = $LautreCSV | where { $_.SerialNumber -eq $SN }
 
-If ($FilterData.count -gt 0 ){#si le filtre retourne qqch
+If ($FilterData -ne $null ){#si le filtre retourne qqch
     #on récupère le code d'activation dans une variable
     $ActivationCode = $FilterData.ActivationCode
 
