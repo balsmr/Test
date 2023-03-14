@@ -15,7 +15,7 @@ $SN = $SN.Substring($SN.Length - ($SN.Length -12))
 #url du csv contenant les informations
 $url = "https://raw.githubusercontent.com/balsmr/Test/main/List.csv"
 #telechargement du csv
-$reponse = Invoke-WebRequest -Uri $url
+$reponse = Invoke-WebRequest -UseBasicParsing -Uri $url
 #isolation du contenu du fichier
 $content = $reponse.Content
 #on met en variable les informations du CSV en utilisant ; comme délimiteur
