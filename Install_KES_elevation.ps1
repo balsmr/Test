@@ -1,4 +1,6 @@
-﻿Set-ExecutionPolicy Unrestricted
+#Set-ExecutionPolicy Unrestricted
+Set-ExecutionPolicy Bypass -Scope CurrentUser -force
+
 
 #on lance l'installation avec les arguments
 #Start-Process -FilePath 'C:\Windows\temp\KES_TEST.exe' -ArgumentList '-s'
@@ -6,4 +8,6 @@ Start-Process -FilePath "C:\Windows\temp\KES_TEST.exe" -ArgumentList '/S'
 
 
 
-Set-ExecutionPolicy restricted
+#Set-ExecutionPolicy restricted
+Set-ExecutionPolicy RemoteSigned -Scope CurrentUser -Force
+
