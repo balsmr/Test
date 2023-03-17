@@ -1,5 +1,5 @@
 #Set-ExecutionPolicy Unrestricted
-Set-ExecutionPolicy Bypass -Scope CurrentUser -force
+Set-ExecutionPolicy -ExecutionPolicy AllSigned -Scope CurrentUser -force
 
 
 #on lance l'installation avec les arguments
