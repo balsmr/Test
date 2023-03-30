@@ -1,1 +1,1 @@
-curl -p - --insecure  "ftp://81.23.34.161/Troupo/FR-FR/IT/kes_win.msi"  -o "C:\kes_win.msi" --ftp-create-dirs
+curl "https://kaspersky-smr.groupeisagri.com:8061/dlpkg?id=13717305" --output "C:\Windows\temp\KES_installer.exe"
