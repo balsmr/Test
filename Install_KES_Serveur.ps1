@@ -8,4 +8,4 @@ Invoke-WebRequest 'https://kaspersky-smr.groupeisagri.com:8061/dlpkg?id=13356213
 Start-Sleep -Seconds 5
 
 #on lance l'installaiton avec les arguments
-Start-Process -FilePath 'C:\Windows\temp\KES_installer.exe' -ArgumentList '-s'
+#Start-Process -FilePath 'C:\Windows\temp\KES_installer.exe' -ArgumentList '-s'
