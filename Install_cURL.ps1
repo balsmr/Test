@@ -7,6 +7,8 @@
 ##Auteur : bbo
 ##
 ##########
+#on active les tls
+[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
 #on test si curl est déjà présent 
 if((Test-Path "C:\Windows\System32\curl.exe") -eq $true){
 
