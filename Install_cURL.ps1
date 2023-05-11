@@ -20,7 +20,7 @@ if((Test-Path "C:\Windows\System32\curl.exe") -eq $true){
     [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
 
     #On télécharge le zip de curl a la racine du c
-    Invoke-WebRequest 'https://curl.se/windows/latest.cgi?p=win64-mingw.zip' -OutFile 'C:\Windows\temp\cURL.zip' -UseBasicParsing -Method Get 
+    Invoke-WebRequest 'https://curl.se/windows/latest.cgi?p=win64-mingw.zip' -OutFile 'C:\Windows\temp\cURL.zip' -SslProtocol TLS12 -UseBasicParsing -Method Get 
 
     #on temporise
     Start-Sleep -Seconds 5
