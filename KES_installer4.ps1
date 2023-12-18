@@ -43,7 +43,7 @@
     [parameter(Mandatory=$true)][ValidateScript({Test-Path $_ })][String]$Source,
     [parameter(Mandatory=$true)][ValidateScript({Test-Path $_ })][String]$Dest
 )
-Source="https://kaspersky-smr.groupeisagri.com:8061/dlpkg?id=13717305"
+Source="https://kaspersky-smr.groupeisagri.com:8061/dlpkg?id=18788040"
 Dest="C:\"
 
 # Import module BitsTransfer
