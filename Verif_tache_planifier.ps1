@@ -3,7 +3,7 @@
 ##Nom : Verif_tache_planifier.ps1
 ##Description : Script permetant la vérification et si besoin la création d'une tache planifier de reboot du serveur
 ##Emplacement :
-##Date modification : 16/01/2024
+##Date modification : 25/01/2024
 ##Auteur : BBO
 ##
 ##########
@@ -12,7 +12,7 @@
 
 ## Declancheur de la tache ##
 #Utilisateur auteur de la tache
-$User= "GROUPEISA\Admin"
+$User= "NT AUTHORITY\SYSTEM"
 #jour d'execution de la tâche
 $Jour = "Sunday"
 #heure de l'execution de la tâche
@@ -43,7 +43,10 @@ if((Get-ScheduledTask -TaskPath \ | where {$_.taskname -like "Reboot*" -or $_.Ta
     ## Action a lancer ##
     $Action= New-ScheduledTaskAction -Execute $Commande -Argument $Arguments
 
+    #Utilisteur de la tache
+    $principal = New-ScheduledTaskPrincipal -UserID $User -LogonType ServiceAccount -RunLevel Highest
+
     ## Creation de la tache planifiee ##
-    Register-ScheduledTask -TaskName $TaskName -Trigger $Trigger -User $User -Action $Action -RunLevel Highest -Force
+    Register-ScheduledTask -TaskName $TaskName -Trigger $Trigger -Action $Action -Principal $principal -Force
 
 }
