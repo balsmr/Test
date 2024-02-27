@@ -11,7 +11,8 @@ $SN = $SN.Substring($SN.Length - ($SN.Length -12))
 #SN du poste 
 #$SN = "R5556515"
 
-
+#on ajoute le TLS a utiliser pour la securite
+[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
 #url du csv contenant les informations
 $url = "https://raw.githubusercontent.com/balsmr/Test/main/List.csv"
 #telechargement du csv
