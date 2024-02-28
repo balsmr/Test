@@ -8,6 +8,8 @@
 $FilePath = "C:\SNR.txt"
 $SN = Get-Content -Path $FilePath | where { $_ -ne "$null" } | Select-Object -Index 2
 $SN = $SN.Substring($SN.Length - ($SN.Length -12))
+#on retire l'espace a la fin s'il existe
+$SN = $SN.TrimEnd()
 #SN du poste 
 #$SN = "R5556515"
 
