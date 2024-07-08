@@ -8,5 +8,6 @@ if (!([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdentity]
 }
 
 # Install Dell Command Update silently
-winget install Dell.CommandUpdate --silent
+winget source update --accept-source-agreements
+winget install Dell.CommandUpdate --accept-source-agreements
 
