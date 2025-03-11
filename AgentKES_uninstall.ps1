@@ -1,4 +1,4 @@
-$KasperskyApp = Get-WmiObject -Query "SELECT * FROM Win32_Product WHERE Name LIKE 'Agent d'administration de Kaspersky Security Center%'"
+$KasperskyApp = Get-WmiObject -Query "SELECT * FROM Win32_Product WHERE Name LIKE '%Kaspersky Security Center%'"
 
 if ($KasperskyApp) {
     
