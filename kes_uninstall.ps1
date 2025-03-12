@@ -1,8 +1,8 @@
-$KasperskyApp = Get-WmiObject -Query "SELECT * FROM Win32_Product WHERE Name LIKE 'Kaspersky%'"
+$KasperskyApp = Get-WmiObject -Query "SELECT * FROM Win32_Product WHERE Name LIKE '%kaspersky Endpoint%'"
 
 if ($KasperskyApp) {
     $Password = "!H_<*i:6dJeU7HABbt(F"
     $KLAdminUser = "KLAdmin"
-
-    Start-Process -FilePath "msiexec.exe" -ArgumentList "/x $($KasperskyApp.IdentifyingNumber) /qn REMOVE=ALL /pKLPASSWD=$Password /pKLLOGIN=$KLAdminUser" -Wait -NoNewWindow
+    $Argument = "/x $($KasperskyApp.IdentifyingNumber) KLLOGIN=$KLAdminUser KLPASSWD=$Password /qn"
+    Start-Process -FilePath "msiexec.exe" -ArgumentList $Argument -Wait -NoNewWindow
 }
