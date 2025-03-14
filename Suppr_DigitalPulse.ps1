@@ -1,13 +1,3 @@
-##########
-##
-##Nom : Suppr_*.ps1
-##Description : script de désinstallation d'application par la commande msiexec
-##Emplacement : github pour lancement par tache
-##Date modification :  14/03/2025
-##Auteur : BBO
-##
-##########
-
 #On selectionne la ou les application(s) qui contienne le nom entre %
 $Application = Get-WmiObject -Query "SELECT * FROM Win32_Product WHERE Name LIKE '%Digital Pulse%'"
 
