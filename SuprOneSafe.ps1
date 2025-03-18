@@ -28,7 +28,7 @@ if ($prog.QuietUninstallString) {
     Write-Output "Désinstallation lancée avec succès."
 } else {
     #On selectionne la ou les application(s) qui contienne le nom entre %
-    $AppGui = Get-WmiObject -Query "SELECT * FROM Win32_Product WHERE Name LIKE '%Infatica%'"
+    $AppGui = Get-WmiObject -Query "SELECT * FROM Win32_Product WHERE Name LIKE '%OneSafe PC Cleaner%'"
     
     #Si la selection contient une ou des application(s)
     if ($AppGui) {
