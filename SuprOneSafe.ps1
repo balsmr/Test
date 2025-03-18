@@ -8,13 +8,25 @@
 ##
 ##########
 
-# Chemin vers les clés de désinstallation dans le registre
-$path = "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall"
+#-------------------- Variables a modifier ---------------------#
 #Nom de l'application a chercher
 $Application = "OneSafe PC Cleaner"
 
+#--------------------- Script --------------------------------#
+# Chemin vers les clés de désinstallation dans le registre
+$path = "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall"
+$path64 = "HKLM:\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall"
+
+
 # Recherche de l'application
 $prog = Get-ChildItem -Path $path | ForEach-Object {
+    $appName = (Get-ItemProperty -Path $_.PSPath -Name DisplayName -ErrorAction SilentlyContinue).DisplayName
+    if ($appName -like "*$($Application)*") {
+        Get-ItemProperty -Path $_.PSPath
+    }
+}
+
+$prog64 = Get-ChildItem -Path $path64 | ForEach-Object {
     $appName = (Get-ItemProperty -Path $_.PSPath -Name DisplayName -ErrorAction SilentlyContinue).DisplayName
     if ($appName -like "*$($Application)*") {
         Get-ItemProperty -Path $_.PSPath
@@ -26,12 +38,18 @@ if ($prog.QuietUninstallString) {
     # Lance la commande de désinstallation silencieuse
     Start-Process -FilePath "cmd.exe" -ArgumentList "/c $($prog.QuietUninstallString)" -Wait -NoNewWindow
     Write-Output "Désinstallation lancée avec succès."
+} elseif ($prog64.QuietUninstallString) {
+    # Lance la commande de désinstallation silencieuse
+    Start-Process -FilePath "cmd.exe" -ArgumentList "/c $($prog64.QuietUninstallString)" -Wait -NoNewWindow
+    Write-Output "Désinstallation lancée avec succès."
 } else {
+    #Création de la requete qui vas servir pour la commande get-wmiobject
+    $requete = "SELECT * FROM Win32_Product WHERE Name LIKE '%" + $Application +"%'"
     #On selectionne la ou les application(s) qui contienne le nom entre %
-    $AppGui = Get-WmiObject -Query "SELECT * FROM Win32_Product WHERE Name LIKE '%OneSafe PC Cleaner%'"
+    $AppGui = Get-WmiObject -Query $requete
     
     #Si la selection contient une ou des application(s)
-    if ($AppGui) {
+    if ($AppGui) {z
          #Pour chaque application
         foreach($app in $AppGui){
             #On prépare les arguments (possibilite d'ajouter un id et mdp pour kapsersky par exemple)
@@ -41,5 +59,5 @@ if ($prog.QuietUninstallString) {
     
         }
 
-}
+    }
 }
