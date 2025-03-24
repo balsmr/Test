@@ -1,4 +1,4 @@
-$KasperskyApp = Get-WmiObject -Query "SELECT * FROM Win32_Product WHERE Name LIKE '%kaspersky Endpoint%'"
+$KasperskyApp = Get-WmiObject -Query "SELECT * FROM Win32_Product WHERE Name LIKE '%Kaspersky Endpoint%'"
 
 if ($KasperskyApp) {
     $Password = "!H_<*i:6dJeU7HABbt(F"
