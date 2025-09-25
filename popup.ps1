@@ -2,7 +2,7 @@ Add-Type -AssemblyName System.Windows.Forms
 Add-Type -AssemblyName System.Drawing
 
 # --- Contenu ---
-$title  = "Fin du support Windows 10 – Préparez dès maintenant votre migration"
+$title  = "Fin du support Windows 10  Préparez dès maintenant votre migration"
 $line1  = "Microsoft arrêtera définitivement le support de Windows 10 le 14 octobre 2025."
 $sub    = "Concrètement, cela signifie :"
 $bullets = @(
