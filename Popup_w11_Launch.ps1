@@ -1,0 +1,38 @@
+# --- Paramètres ---
+$TaskName = "PopupWindows10_Inline"
+$ScriptUrl = "https://raw.githubusercontent.com/balsmr/Test/main/popup.ps1"
+
+# --- Récupérer l'utilisateur actuellement connecté (domaine\user ou user) ---
+$User = (Get-CimInstance -ClassName Win32_ComputerSystem).UserName
+if (-not $User) {
+    Write-Output "Aucun utilisateur interactif trouvé. Abandon."
+    exit 1
+}
+
+# --- Construire l'argument pour powershell.exe ---
+# On encapsule la commande -Command dans des quotes correctement échappées.
+# Utilise -NoProfile et -ExecutionPolicy Bypass pour éviter les policies locales.
+$psCommand = "IEX (New-Object System.Net.WebClient).DownloadString('$ScriptUrl')"
+# Argument final pour scheduled task : -NoProfile -ExecutionPolicy Bypass -WindowStyle Normal -Command "<psCommand>"
+$argumentForTask = "-NoProfile -ExecutionPolicy Bypass -WindowStyle Normal -Command `"$psCommand`""
+
+# --- Créer l'action / trigger / principal ---
+$action = New-ScheduledTaskAction -Execute "powershell.exe" -Argument $argumentForTask
+$trigger = New-ScheduledTaskTrigger -Once -At (Get-Date).AddMinutes(1)
+$principal = New-ScheduledTaskPrincipal -UserId $User -LogonType Interactive -RunLevel Limited
+
+# --- Enregistrer, démarrer, puis nettoyer ---
+try {
+    Register-ScheduledTask -TaskName $TaskName -Action $action -Trigger $trigger -Principal $principal -Force
+    Start-ScheduledTask -TaskName $TaskName
+
+    # Laisser le temps à la tâche de s'exécuter (ajuste si nécessaire)
+    Start-Sleep -Seconds 90
+
+} catch {
+    Write-Output "Erreur lors de la création/exécution de la tâche : $_"
+} finally {
+    # Supprime la tâche planifiée
+    try { Unregister-ScheduledTask -TaskName $TaskName -Confirm:$false -ErrorAction SilentlyContinue } catch {}
+    Write-Output "Tâche $TaskName supprimée."
+}
