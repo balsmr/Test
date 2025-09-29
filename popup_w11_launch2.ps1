@@ -1,6 +1,6 @@
 # --- Paramètres ---
 $TaskName  = "PopupWindows10_Inline"
-$ScriptUrl = "https://raw.githubusercontent.com/plop/Test/refs/heads/main/mapopup.ps1"  # <-- ton URL
+$ScriptUrl = "https://raw.githubusercontent.com/balsmr/Test/main/popup.ps1"  # <-- ton URL
 $VbsPath   = Join-Path $env:ProgramData ($TaskName + ".vbs")
 
 # --- 1) Récupérer l'utilisateur interactif ---
@@ -71,3 +71,4 @@ try {
 # --- Optionnel : nettoyage du VBS côté SYSTEM après 90s (éviter résidu) ---
 Start-Sleep -Seconds 90
 try { Remove-Item -Path $VbsPath -ErrorAction SilentlyContinue } catch {}
+
